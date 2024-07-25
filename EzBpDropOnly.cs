@@ -74,7 +74,7 @@ namespace Oxide.Plugins
 
             public static Configuration DefaultConfig()
             {
-                return new Configuration{DropRate = 0.01f};
+                return new Configuration{DropRate = 10.0f};
             }
         }
 
