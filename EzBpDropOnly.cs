@@ -18,13 +18,15 @@ namespace Oxide.Plugins
         #region Oxide Hooks
         private object CanResearchItem(BasePlayer player, Item item)
         {
-            SendReply(player, "このアイテムのリサーチはできません。");
+            if (item == null || player == null) return null;
+            SendReply(player, lang.GetMessage("ResearchItem", this, player.UserIDString));
             return false;
         }
 
         private object CanUnlockTechTreeNode(BasePlayer player, TechTreeData.NodeInstance node, TechTreeData techTree)
         {
-            SendReply(player, "テックツリーをアンロックすることはできません。");
+            if (techTree == null || node == null || player == null) return null;
+            SendReply(player, lang.GetMessage("UnlockTechTree", this, player.UserIDString));
             return false;
         }
 
@@ -74,7 +76,7 @@ namespace Oxide.Plugins
 
             public static Configuration DefaultConfig()
             {
-                return new Configuration{DropRate = 10.0f};
+                return new Configuration{DropRate = 0.01f};
             }
         }
 
@@ -98,6 +100,22 @@ namespace Oxide.Plugins
         protected override void LoadDefaultConfig() => _config = Configuration.DefaultConfig();
         protected override void SaveConfig() => Config.WriteObject(_config);
 
+        #endregion
+        #region Localization
+        void LoadDefaultMessages()
+        {
+            lang.RegisterMessages(new Dictionary<string, string>
+            {
+                ["ResearchItem"] = "You can not research!",
+                ["UnlockTechTree"] = "You can not unlock!",
+            }, this);
+            lang.RegisterMessages(new Dictionary<string, string>
+            {
+                ["ResearchItem"] = "このアイテムのリサーチはできません。",
+                ["UnlockTechTree"] = "テックツリーをアンロックすることはできません。",
+            }, this, "ja");
+
+        }
         #endregion
     }
 }
