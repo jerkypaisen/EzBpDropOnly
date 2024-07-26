@@ -7,14 +7,14 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Oxide.Core;
+using System.ComponentModel;
 
 namespace Oxide.Plugins
 {
-    [Info("EzBpDropOnly", "jerkypaisen", "1.0.0")]
+    [Info("EzBpDropOnly", "jerkypaisen", "1.0.1")]
     [Description("BP is dropped. Research and tree are disabled.")]
     public class EzBpDropOnly : RustPlugin
     {
-
         #region Oxide Hooks
         private object CanResearchItem(BasePlayer player, Item item)
         {
@@ -35,27 +35,54 @@ namespace Oxide.Plugins
             if (player != null && action == "study" && item.IsBlueprint())
             {
                 string itemName = item.blueprintTargetDef.displayName.translated;
-                string msg = player.displayName + " さんが " + itemName + " をおぼえました";
+                string msg = string.Format(lang.GetMessage("YouGetBlueprint", this, player.UserIDString), player.displayName, itemName);
                 Server.Broadcast(msg, null);
             }
+        }
+
+        private BaseCorpse OnCorpsePopulate(HumanNPC npc, NPCPlayerCorpse corpse)
+        {
+            if (npc == null || corpse == null) return null;
+            if (npc.LootSpawnSlots.Length != 0)
+            {
+                LootContainer.LootSpawnSlot[] lootSpawnSlots = npc.LootSpawnSlots;
+                for (int j = 0; j < lootSpawnSlots.Length; j++)
+                {
+                    LootContainer.LootSpawnSlot lootSpawnSlot = lootSpawnSlots[j];
+                    for (int k = 0; k < lootSpawnSlot.numberToSpawn; k++)
+                    {
+                        if ((string.IsNullOrEmpty(lootSpawnSlot.onlyWithLoadoutNamed) || lootSpawnSlot.onlyWithLoadoutNamed == npc.GetLoadoutName()) && UnityEngine.Random.Range(0f, 1f) <= lootSpawnSlot.probability)
+                        {
+                            lootSpawnSlot.definition.SpawnIntoContainer(corpse.containers[0]);
+                        }
+                    }
+                }
+                SpawnRandomBP(corpse.containers[0], _config.NpcDropRate);
+            }
+            return corpse;
         }
 
         private void SpawnLoot(LootContainer container)
         {
             if (container == null) return;
+            SpawnRandomBP(container.inventory, _config.CrateDropRate);
+        }
 
-            var idx = UnityEngine.Random.Range(0, container.inventory.itemList.Count);
-            var item = container.inventory.itemList[idx];
+        private void SpawnRandomBP(ItemContainer container, float dropRate)
+        {
+            var idx = UnityEngine.Random.Range(0, container.itemList.Count);
+            var item = container.itemList[idx];
             if (item == null) return;
             if (item.info.Blueprint == null) return;
-            if (item.info.Blueprint.isResearchable && _config.DropRate >= UnityEngine.Random.Range(0f, 100f)) 
+            var rate = UnityEngine.Random.Range(0f, 100f);
+            if (item.info.Blueprint.isResearchable && dropRate >= rate)
             {
                 var shortName = "blueprintbase";
                 var bpitem = ItemManager.CreateByName(shortName, 1, 0);
                 bpitem.name = "Recipe";
                 bpitem.blueprintTarget = item.info.itemid;
-                container.inventory.itemList[idx] = bpitem;
-                container.inventory.MarkDirty();
+                container.itemList[idx] = bpitem;
+                container.MarkDirty();
             }
         }
 
@@ -71,12 +98,15 @@ namespace Oxide.Plugins
 
         public class Configuration
         {
-            [JsonProperty(PropertyName = "drop rate of the blueprint as a float.")]
-            public float DropRate;
+            [JsonProperty(PropertyName = "Crate drop rate of the blueprint as a float.")]
+            public float CrateDropRate;
+
+            [JsonProperty(PropertyName = "Npc drop rate of the blueprint as a float.")]
+            public float NpcDropRate;
 
             public static Configuration DefaultConfig()
             {
-                return new Configuration{DropRate = 0.01f};
+                return new Configuration{CrateDropRate = 5.0f, NpcDropRate = 0.1f};
             }
         }
 
@@ -98,7 +128,6 @@ namespace Oxide.Plugins
         }
 
         protected override void LoadDefaultConfig() => _config = Configuration.DefaultConfig();
-        protected override void SaveConfig() => Config.WriteObject(_config);
 
         #endregion
         #region Localization
@@ -108,13 +137,14 @@ namespace Oxide.Plugins
             {
                 ["ResearchItem"] = "You can not research!",
                 ["UnlockTechTree"] = "You can not unlock!",
+                ["YouGetBlueprint"] = "{0} learned the {1}!",
             }, this);
             lang.RegisterMessages(new Dictionary<string, string>
             {
                 ["ResearchItem"] = "このアイテムのリサーチはできません。",
                 ["UnlockTechTree"] = "テックツリーをアンロックすることはできません。",
+                ["YouGetBlueprint"] = "{0} さんが {1} をおぼえました。",
             }, this, "ja");
-
         }
         #endregion
     }
