@@ -128,7 +128,10 @@ namespace Oxide.Plugins
         }
 
         protected override void LoadDefaultConfig() => _config = Configuration.DefaultConfig();
-
+        protected override void SaveConfig()
+        {
+            Config.WriteObject(_config, true);
+        }
         #endregion
         #region Localization
         void LoadDefaultMessages()
