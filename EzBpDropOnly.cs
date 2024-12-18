@@ -81,7 +81,10 @@ namespace Oxide.Plugins
                 var bpitem = ItemManager.CreateByName(shortName, 1, 0);
                 bpitem.name = "Recipe";
                 bpitem.blueprintTarget = item.info.itemid;
-                container.itemList[idx] = bpitem;
+                container.itemList.RemoveAt(idx);
+
+                bpitem.MoveToContainer(container);
+                //container.itemList[idx] = bpitem;
                 container.MarkDirty();
             }
         }
